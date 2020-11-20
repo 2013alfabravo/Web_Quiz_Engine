@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 public class Completion {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     Long id;
 
     @Column
