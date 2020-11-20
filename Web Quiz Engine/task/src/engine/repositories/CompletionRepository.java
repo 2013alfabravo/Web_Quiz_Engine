@@ -1,5 +1,7 @@
-package engine;
+package engine.repositories;
 
+import engine.entities.Completion;
+import engine.entities.Quiz;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

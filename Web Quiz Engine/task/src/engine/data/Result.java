@@ -1,4 +1,4 @@
-package engine;
+package engine.data;
 
 @SuppressWarnings("unused")
 public class Result {

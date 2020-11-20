@@ -1,5 +1,12 @@
 package engine;
 
+import engine.data.*;
+import engine.entities.Completion;
+import engine.entities.Quiz;
+import engine.entities.User;
+import engine.repositories.CompletionRepository;
+import engine.repositories.QuizRepository;
+import engine.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Page;
@@ -7,13 +14,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Optional;
@@ -34,23 +39,26 @@ public class QuizController {
     @Autowired
     private CompletionRepository completionRepository;
 
-    QuizController() {  }
+    QuizController() {
+    }
 
     @PostMapping(path = "/api/quizzes")
     public Quiz addQuiz(@Valid @RequestBody Quiz quiz) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = ((QuizPrincipal)authentication.getPrincipal()).getUser();
+        User currentUser = getCurrentUser();
         quiz.setUser(currentUser);
         return quizRepository.save(quiz);
     }
 
     @GetMapping(path = "api/quizzes/{id}")
-    public Quiz getQuizById(@PathVariable Long id) {
+    public ResponseEntity<?> getQuizById(@PathVariable Long id) {
         Optional<Quiz> quiz = quizRepository.findById(id);
+
         if (quiz.isPresent()) {
-            return quiz.get();
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(quiz.get());
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz not found for id=" + id);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No quiz found for id=" + id);
         }
     }
 
@@ -61,43 +69,51 @@ public class QuizController {
     }
 
     @PostMapping(path = "api/quizzes/{id}/solve")
-    public Result solveQuiz(@PathVariable Long id, @RequestBody Answer answer) {
-        Quiz quiz = getQuizById(id);
-        if (quiz == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz not found for id=" + id);
+    public ResponseEntity<?> solveQuiz(@PathVariable Long id, @RequestBody Answer answer) {
+        Optional<Quiz> quiz = quizRepository.findById(id);
+
+        if (quiz.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No quiz found for id=" + id);
         }
 
-        List<Integer> correctOptions = quiz.getAnswer();
+        List<Integer> correctOptions = quiz.get().getAnswer();
         List<Integer> selectedOptions = answer.getAnswer();
 
         if (correctOptions.size() == selectedOptions.size() && correctOptions.containsAll(selectedOptions)) {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            User user = ((QuizPrincipal)authentication.getPrincipal()).getUser();
-            Completion completion = new Completion(quiz, user);
+            User user = getCurrentUser();
+            Completion completion = new Completion(quiz.get(), user);
             completionRepository.save(completion);
 
-            return Result.CORRECT;
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(Result.CORRECT);
         } else {
-            return Result.FAIL;
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(Result.FAIL);
         }
     }
 
     @PostMapping(path = "api/register")
-    public void registerUser(@RequestBody RegistrationRequest request) {
+    public ResponseEntity<String> registerUser(@RequestBody RegistrationRequest request) {
         if (!request.getEmail().matches("(.+)@(.+\\..+)")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid email: " + request.getEmail());
+            return ResponseEntity.badRequest()
+                    .body("Invalid email: " + request.getEmail());
         }
 
         if (request.getPassword().length() < 5) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password should be at least 5 characters long");
+            return ResponseEntity.badRequest()
+                    .body("Password should be at least 5 characters long");
         }
 
         Optional<User> user = userRepository.findByName(request.getEmail());
         if (user.isPresent()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User " + request.getEmail() + " is already registered");
+            return ResponseEntity.badRequest()
+                    .body("User " + request.getEmail() + " is already registered");
         } else {
             User newUser = new User(request.getEmail(), passwordEncoder.encode(request.getPassword()));
             userRepository.save(newUser);
+            return ResponseEntity.ok()
+                    .body("You have been successfully registered");
         }
     }
 
@@ -107,40 +123,47 @@ public class QuizController {
         Optional<Quiz> quiz = quizRepository.findById(id);
 
         if (quiz.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No quiz found for id=" + id);
         }
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = ((QuizPrincipal)authentication.getPrincipal()).getUser();
+        Long quizAuthorID = quiz.get().getUser().getId();
+        Long currentUserID = getCurrentUser().getId();
 
-        if (user.getId().equals(quiz.get().getUser().getId())) {
+        if (currentUserID.equals(quizAuthorID)) {
             completionRepository.deleteAllByQuiz(quiz.get());
             quizRepository.deleteById(id);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+            return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                    .body("Quiz was successfully deleted");
         } else {
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You are not authorized to delete this quiz");
         }
     }
 
     @GetMapping(value = "api/quizzes/completed")
-    public Page<CompletedDTO> getCompletions(@RequestParam(required = false, defaultValue = "0") int page) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = ((QuizPrincipal)authentication.getPrincipal()).getUser();
-
+    public Page<CompletionDTO> getCompletions(@RequestParam(required = false, defaultValue = "0") int page) {
+        User user = getCurrentUser();
         Pageable pageable = PageRequest.of(page, 10);
+
         return completionRepository.findAllByUserOrderByCompletedAtDesc(user.getName(), pageable).map(this::mapToCompletedDTO);
     }
 
-    @GetMapping(value = "/users")
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    private User getCurrentUser() {
+        return ((QuizPrincipal) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal())
+                .getUser();
     }
 
-    private CompletedDTO mapToCompletedDTO(Completion completion) {
-        CompletedDTO completedDTO = new CompletedDTO();
-        completedDTO.setId(completion.getQuiz().getId());
-        completedDTO.setCompletedAt(completion.getCompletedAt());
-        return completedDTO;
+    private CompletionDTO mapToCompletedDTO(Completion completion) {
+        CompletionDTO completionDTO = new CompletionDTO();
+        completionDTO.setId(completion.getQuiz().getId());
+        completionDTO.setCompletedAt(completion.getCompletedAt());
+
+        return completionDTO;
     }
 
     @Bean

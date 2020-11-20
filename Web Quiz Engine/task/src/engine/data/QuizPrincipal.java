@@ -1,10 +1,12 @@
-package engine;
+package engine.data;
 
+import engine.entities.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 
+@SuppressWarnings("unused")
 public class QuizPrincipal implements UserDetails {
     private User user;
 

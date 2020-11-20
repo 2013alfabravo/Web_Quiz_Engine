@@ -1,7 +1,8 @@
-package engine;
+package engine.data;
 
 import javax.validation.constraints.NotEmpty;
 
+@SuppressWarnings("unused")
 public class RegistrationRequest {
     @NotEmpty
     private String email;

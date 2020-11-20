@@ -1,5 +1,8 @@
 package engine;
 
+import engine.data.QuizPrincipal;
+import engine.entities.User;
+import engine.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

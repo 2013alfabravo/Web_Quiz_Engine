@@ -1,10 +1,11 @@
-package engine;
+package engine.entities;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
+@SuppressWarnings("unused")
 @Entity
 public class Completion {
     @Id
@@ -26,7 +27,7 @@ public class Completion {
 
     Completion() {  }
 
-    Completion(Quiz quiz, User user) {
+    public Completion(Quiz quiz, User user) {
         this.quiz = quiz;
         this.user = user;
     }

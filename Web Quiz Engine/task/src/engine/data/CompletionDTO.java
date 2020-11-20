@@ -1,11 +1,11 @@
-package engine;
+package engine.data;
 
 import java.time.LocalDateTime;
 
-public class CompletedDTO {
+@SuppressWarnings("unused")
+public class CompletionDTO {
     private Long id;
     private LocalDateTime completedAt;
-
 
     public Long getId() {
         return id;

@@ -1,7 +1,8 @@
-package engine;
+package engine.entities;
 
 import javax.persistence.*;
 
+@SuppressWarnings("unused")
 @Entity
 public class User {
 
@@ -17,7 +18,7 @@ public class User {
 
     User() { }
 
-    User(String name, String password) {
+    public User(String name, String password) {
         this.name = name;
         this.password = password;
     }
