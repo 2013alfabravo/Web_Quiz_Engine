@@ -10,8 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface CompletionRepository extends JpaRepository<Completion, Long> {
 
-    @Query("SELECT a FROM Completion a WHERE a.user.name = :name ORDER BY a.completedAt DESC")
-    Page<Completion> findAllByUserOrderByCompletedAtDesc(@Param("name") String name, Pageable pageable);
+    @Query("SELECT a FROM Completion a WHERE a.user.id = :id ORDER BY a.completedAt DESC")
+    Page<Completion> findAllByUserIdOrderByCompletedAtDesc(@Param("id") Long id, Pageable pageable);
 
     void deleteAllByQuiz(Quiz quiz);
 }

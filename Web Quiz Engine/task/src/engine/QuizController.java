@@ -144,10 +144,10 @@ public class QuizController {
 
     @GetMapping(value = "api/quizzes/completed")
     public Page<CompletionDTO> getCompletions(@RequestParam(required = false, defaultValue = "0") int page) {
-        User user = getCurrentUser();
+        Long userId = getCurrentUser().getId();
         Pageable pageable = PageRequest.of(page, 10);
 
-        return completionRepository.findAllByUserOrderByCompletedAtDesc(user.getName(), pageable).map(this::mapToCompletedDTO);
+        return completionRepository.findAllByUserIdOrderByCompletedAtDesc(userId, pageable).map(this::mapToCompletedDTO);
     }
 
     private User getCurrentUser() {
